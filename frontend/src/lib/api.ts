@@ -1,6 +1,6 @@
 import { getAccessToken } from './auth';
 
-export const API_URL = '/api';
+export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
