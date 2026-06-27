@@ -112,10 +112,11 @@ public class Main {
         if (result == null) return;
         if (result instanceof int[]) {
             int[] arr = (int[]) result;
+            System.out.print("[");
             for (int i = 0; i < arr.length; i++) {
-                System.out.print(arr[i] + (i == arr.length - 1 ? "" : " "));
+                System.out.print(arr[i] + (i == arr.length - 1 ? "" : ", "));
             }
-            System.out.println();
+            System.out.println("]");
         } else if (result instanceof Boolean) {
             System.out.println(result);
         } else {
