@@ -1,0 +1,120 @@
+# Production stack: API + worker + MongoDB + Redis + nginx
+# Usage: docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+services:
+  mongodb:
+    image: mongo:6
+    container_name: oj_mongodb
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: oj_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${ECR_API_IMAGE:-oj-api:latest}
+    container_name: oj_api
+    restart: unless-stopped
+    user: '${WORKER_USER:-0}:${WORKER_GROUP:-0}'
+    env_file:
+      - .env.production
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/online_judge
+      REDIS_URL: redis://redis:6379
+      STORAGE_PATH: /data/storage
+      DOCKER_SOCKET: /var/run/docker.sock
+      JUDGE_WORKDIR: /data/workdir
+      TRUST_PROXY: 'true'
+    volumes:
+      - oj_storage:/data/storage
+      - /data/workdir:/data/workdir
+      - ${DOCKER_SOCKET_HOST:-/var/run/docker.sock}:/var/run/docker.sock
+    expose:
+      - '4000'
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', 'scripts/healthcheck-api.js']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: ${ECR_WORKER_IMAGE:-oj-worker:latest}
+    container_name: oj_worker
+    restart: unless-stopped
+    # Root (or docker group) required for /var/run/docker.sock on EC2
+    user: '${WORKER_USER:-0}:${WORKER_GROUP:-0}'
+    env_file:
+      - .env.production
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/online_judge
+      REDIS_URL: redis://redis:6379
+      REDIS_QUEUE_URL: redis://redis:6379
+      DOCKER_SOCKET: /var/run/docker.sock
+      STORAGE_PATH: /data/storage
+      JUDGE_WORKDIR: /data/workdir
+    volumes:
+      - oj_storage:/data/storage
+      - /data/workdir:/data/workdir
+      - ${DOCKER_SOCKET_HOST:-/var/run/docker.sock}:/var/run/docker.sock
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', 'scripts/healthcheck-worker.js']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 35s
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    image: ${ECR_NGINX_IMAGE:-oj-nginx:latest}
+    container_name: oj_nginx
+    restart: unless-stopped
+    ports:
+      - '${HTTP_PORT:-80}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongo_data:
+  oj_storage:
+  oj_workdir:

@@ -1,0 +1,11 @@
+.app-container--workspace {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-container--workspace .main-content {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
