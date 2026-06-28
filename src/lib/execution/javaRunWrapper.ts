@@ -1,6 +1,6 @@
 /**
  * Wraps LeetCode-style `class Solution` Java sources with a `Main` entrypoint
- * that reads from input.txt and invokes the solution via reflection.
+ * that reads from stdin and invokes the solution via reflection.
  * Sources that already define `class Main` are returned unchanged.
  */
 export function wrapJavaSolutionSource(source: string): string {
@@ -36,7 +36,7 @@ public class Main {
 
             Object[] invokeArgs = buildArgs(sc, target.getParameterTypes());
             Object result = target.invoke(obj, invokeArgs);
-            printResult(result);
+            printResult(result, target.getReturnType());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -57,14 +57,16 @@ public class Main {
         Object[] args = new Object[types.length];
         for (int i = 0; i < types.length; i++) {
             Class<?> type = types[i];
-            if (type == String.class) {
-                args[i] = readRemainingInput(sc);
+            if (type == int[].class) {
+                args[i] = readIntArray(sc);
             } else if (type == int.class || type == Integer.class) {
                 args[i] = sc.hasNextInt() ? sc.nextInt() : 0;
-            } else if (type == int[].class) {
-                args[i] = readIntArray(sc);
+            } else if (type == double.class || type == Double.class) {
+                args[i] = sc.hasNextDouble() ? sc.nextDouble() : 0.0;
             } else if (type == boolean.class || type == Boolean.class) {
                 args[i] = sc.hasNextBoolean() ? sc.nextBoolean() : false;
+            } else if (type == String.class) {
+                args[i] = readRemainingInput(sc);
             } else {
                 args[i] = readRemainingInput(sc);
             }
@@ -102,13 +104,13 @@ public class Main {
             if (sc.hasNextInt()) {
                 arr[i] = sc.nextInt();
             } else if (sc.hasNext()) {
-                sc.next(); // Consume non-int token if any
+                sc.next();
             }
         }
         return arr;
     }
 
-    private static void printResult(Object result) {
+    private static void printResult(Object result, Class<?> returnType) {
         if (result == null) return;
         if (result instanceof int[]) {
             int[] arr = (int[]) result;
@@ -118,7 +120,9 @@ public class Main {
             }
             System.out.println("]");
         } else if (result instanceof Boolean) {
-            System.out.println(result);
+            System.out.println(((Boolean) result) ? "true" : "false");
+        } else if (result instanceof Double) {
+            System.out.printf("%.5f%n", (Double) result);
         } else {
             System.out.println(result);
         }

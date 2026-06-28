@@ -7,7 +7,6 @@ export function wrapPythonSolutionSource(source: string): string {
 import json
 import typing
 import inspect
-import ast
 
 ${source}
 
@@ -34,8 +33,15 @@ def main():
     args = []
     
     for p in params:
-        th_str = str(hints.get(p.name, str))
-        if 'int' in th_str and 'List' in th_str:
+        hint = hints.get(p.name)
+        th_str = str(hint).lower() if hint else ''
+        
+        origin = getattr(hint, '__origin__', None)
+        is_list = (origin is list) or ('list' in th_str)
+        is_int_list = is_list and ('int' in th_str)
+        is_str_list = is_list and ('str' in th_str)
+        
+        if is_int_list:
             if idx < len(input_data):
                 n = int(input_data[idx])
                 idx += 1
@@ -45,25 +51,58 @@ def main():
                         arr.append(int(input_data[idx]))
                         idx += 1
                 args.append(arr)
-        elif 'int' in th_str:
+        elif is_str_list:
+            if idx < len(input_data):
+                n = int(input_data[idx])
+                idx += 1
+                arr = []
+                for _ in range(n):
+                    if idx < len(input_data):
+                        arr.append(input_data[idx])
+                        idx += 1
+                args.append(arr)
+        elif is_list:
+            if idx < len(input_data):
+                n = int(input_data[idx])
+                idx += 1
+                arr = []
+                for _ in range(n):
+                    if idx < len(input_data):
+                        arr.append(int(input_data[idx]))
+                        idx += 1
+                args.append(arr)
+        elif 'int' in th_str or hint is int:
             if idx < len(input_data):
                 args.append(int(input_data[idx]))
                 idx += 1
-        elif 'bool' in th_str:
+        elif 'float' in th_str or hint is float:
+            if idx < len(input_data):
+                args.append(float(input_data[idx]))
+                idx += 1
+        elif 'bool' in th_str or hint is bool:
             if idx < len(input_data):
                 args.append(input_data[idx].lower() == 'true')
                 idx += 1
-        else:
+        elif 'str' in th_str or hint is str:
             if idx < len(input_data):
                 args.append(input_data[idx])
+                idx += 1
+        else:
+            if idx < len(input_data):
+                try:
+                    args.append(int(input_data[idx]))
+                except ValueError:
+                    args.append(input_data[idx])
                 idx += 1
                 
     try:
         res = method(*args)
         if isinstance(res, list):
-            print(json.dumps(res).replace(",", ", ")) # ensures [0, 1] format
+            print(json.dumps(res).replace(",", ", "))
         elif isinstance(res, bool):
             print(str(res).lower())
+        elif isinstance(res, float):
+            print(f"{res:.5f}")
         else:
             print(str(res))
     except Exception as e:
