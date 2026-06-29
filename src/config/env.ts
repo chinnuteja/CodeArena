@@ -51,6 +51,13 @@ const envSchema = z.object({
 
   // Comma-separated allowed origins; omit for same-origin (nginx proxy — preferred in production)
   CORS_ORIGIN: z.string().optional(),
+
+  // Azure OpenAI (AI assistant in workspace)
+  AZURE_OPENAI_ENDPOINT: z.string().url().optional(),
+  AZURE_OPENAI_API_KEY: z.string().min(1).optional(),
+  AZURE_OPENAI_DEPLOYMENT: z.string().default('gpt-5.4-nano'),
+  AZURE_OPENAI_API_VERSION: z.string().default('2024-12-01-preview'),
+  AI_MAX_COMPLETION_TOKENS: z.coerce.number().default(4096),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -3,12 +3,14 @@ import path from 'path';
 import { Submission } from '../submission/submission.model.js';
 import { Problem } from '../problem/problem.model.js';
 import { getAllForProblem } from '../testcase/testcase.service.js';
+import { invalidateProblemListCache } from '../problem/problem.service.js';
 import { storage } from '../../lib/storage/index.js';
 import { engine } from '../../lib/execution/index.js';
 import { publishVerdict } from '../stream/verdict.publisher.js';
 import { Verdict, SubmissionStatus, Language } from '../../config/constants.js';
 import { languages } from '../../lib/execution/languages.js';
 import { env } from '../../config/env.js';
+import { prepareSource } from '../../lib/execution/prepareSource.js';
 
 export const judgeSubmission = async (submissionId: string) => {
   const submission = await Submission.findById(submissionId).populate('problemId');
@@ -42,7 +44,8 @@ export const judgeSubmission = async (submissionId: string) => {
 
     const langSpec = languages[submission.language as Language];
     const sourcePath = path.join(workdir, langSpec.sourceFilename);
-    await fs.writeFile(sourcePath, sourceCode, { mode: 0o666 });
+    const finalSource = prepareSource(submission.language, sourceCode);
+    await fs.writeFile(sourcePath, finalSource, { mode: 0o666 });
 
     const compileRes = await engine.compile(submission.language as Language, sourcePath, workdir);
     if (!compileRes.ok) {
@@ -102,9 +105,6 @@ export const judgeSubmission = async (submissionId: string) => {
 
       const expected = tc.expectedOutput.trim();
       const actual = runRes.stdout.trim();
-      console.log(`[JUDGE TRACE] Testcase ${i + 1}`);
-      console.log(`[JUDGE TRACE] Expected: ${JSON.stringify(expected)}`);
-      console.log(`[JUDGE TRACE] Actual: ${JSON.stringify(actual)}`);
       if (actual !== expected) {
         finalVerdict = Verdict.WA;
         allPassed = false;
@@ -144,6 +144,8 @@ export const judgeSubmission = async (submissionId: string) => {
     if (submission.contestId) {
       const { onContestSubmissionFinalized } = await import('../leaderboard/leaderboard.service.js');
       await onContestSubmissionFinalized(submission);
+    } else if (finalVerdict === Verdict.AC) {
+      await invalidateProblemListCache();
     }
 
   } catch (err) {

@@ -1,7 +1,6 @@
 /**
  * Wraps LeetCode-style `class Solution` Java sources with a `Main` entrypoint
  * that reads from stdin and invokes the solution via reflection.
- * Sources that already define `class Main` are returned unchanged.
  */
 export function wrapJavaSolutionSource(source: string): string {
   if (source.includes('class Main')) {
@@ -26,9 +25,7 @@ public class Main {
             Scanner sc = new Scanner(System.in);
             Class<?> clazz = Class.forName("Solution");
             Object obj = clazz.getDeclaredConstructor().newInstance();
-            Method[] methods = clazz.getDeclaredMethods();
-
-            Method target = findRunnableMethod(methods);
+            Method target = findRunnableMethod(clazz.getDeclaredMethods());
             if (target == null) {
                 System.out.println("No runnable method found.");
                 return;
@@ -43,38 +40,67 @@ public class Main {
     }
 
     private static Method findRunnableMethod(Method[] methods) {
+        Method best = null;
         for (Method m : methods) {
             if (m.getDeclaringClass() == Object.class) continue;
             int mods = m.getModifiers();
             if (Modifier.isStatic(mods) || !Modifier.isPublic(mods)) continue;
-            if (m.getName().equals("main")) continue;
-            return m;
+            String name = m.getName();
+            if (name.equals("main") || name.equals("equals") || name.equals("hashCode") || name.equals("toString")) continue;
+            if (best == null || m.getParameterCount() > best.getParameterCount()) {
+                best = m;
+            }
         }
-        return null;
+        return best;
     }
 
     private static Object[] buildArgs(Scanner sc, Class<?>[] types) {
+        if (types.length == 1 && types[0] == String.class) {
+            return new Object[] { readAllInput(sc) };
+        }
+
         Object[] args = new Object[types.length];
         for (int i = 0; i < types.length; i++) {
-            Class<?> type = types[i];
-            if (type == int[].class) {
-                args[i] = readIntArray(sc);
-            } else if (type == int.class || type == Integer.class) {
-                args[i] = sc.hasNextInt() ? sc.nextInt() : 0;
-            } else if (type == double.class || type == Double.class) {
-                args[i] = sc.hasNextDouble() ? sc.nextDouble() : 0.0;
-            } else if (type == boolean.class || type == Boolean.class) {
-                args[i] = sc.hasNextBoolean() ? sc.nextBoolean() : false;
-            } else if (type == String.class) {
-                args[i] = readRemainingInput(sc);
-            } else {
-                args[i] = readRemainingInput(sc);
-            }
+            args[i] = readArg(sc, types[i]);
         }
         return args;
     }
 
-    private static String readRemainingInput(Scanner sc) {
+    private static Object readArg(Scanner sc, Class<?> type) {
+        if (type == int[].class) {
+            return readIntArray(sc);
+        }
+        if (type == long.class || type == Long.class) {
+            return sc.hasNextLong() ? sc.nextLong() : 0L;
+        }
+        if (type == int.class || type == Integer.class) {
+            return sc.hasNextInt() ? sc.nextInt() : 0;
+        }
+        if (type == double.class || type == Double.class) {
+            return sc.hasNextDouble() ? sc.nextDouble() : 0.0;
+        }
+        if (type == boolean.class || type == Boolean.class) {
+            return readBoolean(sc);
+        }
+        if (type == String.class) {
+            return sc.hasNext() ? sc.next() : "";
+        }
+        if (type == char.class || type == Character.class) {
+            String token = sc.hasNext() ? sc.next() : "";
+            return token.isEmpty() ? '\\0' : token.charAt(0);
+        }
+        return sc.hasNext() ? sc.next() : "";
+    }
+
+    private static boolean readBoolean(Scanner sc) {
+        if (!sc.hasNext()) return false;
+        String token = sc.next().toLowerCase();
+        if (token.equals("true") || token.equals("1")) return true;
+        if (token.equals("false") || token.equals("0")) return false;
+        return Boolean.parseBoolean(token);
+    }
+
+    private static String readAllInput(Scanner sc) {
         if (!sc.hasNextLine()) return "";
         StringBuilder sb = new StringBuilder(sc.nextLine());
         while (sc.hasNextLine()) {
@@ -85,12 +111,11 @@ public class Main {
 
     private static int[] readIntArray(Scanner sc) {
         if (!sc.hasNext()) return new int[0];
-        String token = sc.nextLine().trim();
-        if (token.isEmpty() && sc.hasNextLine()) token = sc.nextLine().trim();
-        if (token.contains("[") || token.contains(",")) {
-            token = token.replaceAll("\\\\[|\\\\]", "");
-            String[] parts = token.split(",");
-            if (token.isEmpty()) parts = new String[0];
+
+        String first = sc.next();
+        if (first.contains(",") || first.contains("[")) {
+            String cleaned = first.replaceAll("\\\\[|\\\\]", "");
+            String[] parts = cleaned.split(",");
             int[] arr = new int[parts.length];
             for (int i = 0; i < parts.length; i++) {
                 String p = parts[i].trim();
@@ -98,13 +123,13 @@ public class Main {
             }
             return arr;
         }
-        int n = Integer.parseInt(token);
+
+        int n = Integer.parseInt(first);
         int[] arr = new int[n];
         for (int i = 0; i < n; i++) {
+            while (!sc.hasNextInt() && sc.hasNext()) sc.next();
             if (sc.hasNextInt()) {
                 arr[i] = sc.nextInt();
-            } else if (sc.hasNext()) {
-                sc.next();
             }
         }
         return arr;
@@ -119,10 +144,17 @@ public class Main {
                 System.out.print(arr[i] + (i == arr.length - 1 ? "" : ", "));
             }
             System.out.println("]");
+        } else if (result instanceof long[]) {
+            long[] arr = (long[]) result;
+            System.out.print("[");
+            for (int i = 0; i < arr.length; i++) {
+                System.out.print(arr[i] + (i == arr.length - 1 ? "" : ", "));
+            }
+            System.out.println("]");
         } else if (result instanceof Boolean) {
             System.out.println(((Boolean) result) ? "true" : "false");
-        } else if (result instanceof Double) {
-            System.out.printf("%.5f%n", (Double) result);
+        } else if (result instanceof Double || result instanceof Float) {
+            System.out.printf("%.5f%n", ((Number) result).doubleValue());
         } else {
             System.out.println(result);
         }

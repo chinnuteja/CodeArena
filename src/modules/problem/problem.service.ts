@@ -6,11 +6,12 @@ import { redisClient } from '../../db/redis.js';
 import { REDIS_KEYS, Verdict } from '../../config/constants.js';
 import crypto from 'crypto';
 import slugify from 'slugify';
+import { Types } from 'mongoose';
 
 const attachSolvedStatus = async (problems: any[], userId: string) => {
   const problemIds = problems.map((p) => p._id);
   const solvedIds = await Submission.distinct('problemId', {
-    userId,
+    userId: new Types.ObjectId(userId),
     problemId: { $in: problemIds },
     verdict: Verdict.AC,
     contestId: null,
@@ -25,14 +26,13 @@ const attachSolvedStatus = async (problems: any[], userId: string) => {
 export const listProblems = async (query: any, userId?: string) => {
   const hash = crypto.createHash('md5').update(JSON.stringify(query)).digest('hex');
   const cacheKey = REDIS_KEYS.problemListCache(hash);
-  
-  const cached = await redisClient.get(cacheKey);
-  if (cached) {
-    const result = JSON.parse(cached);
-    if (userId) {
-      result.data = await attachSolvedStatus(result.data, userId);
+
+  // Authenticated users always get fresh solved status from MongoDB
+  if (!userId) {
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
     }
-    return result;
   }
 
   const { page, limit, difficulty, tag, search, isPractice } = query;
@@ -63,6 +63,13 @@ export const listProblems = async (query: any, userId?: string) => {
   await redisClient.set(cacheKey, JSON.stringify({ data: plainData, meta: result.meta }), 'EX', 30);
 
   return result;
+};
+
+export const invalidateProblemListCache = async () => {
+  const keys = await redisClient.keys('cache:problemlist:*');
+  if (keys.length > 0) {
+    await redisClient.del(...keys);
+  }
 };
 
 export const getProblem = async (slug: string) => {
@@ -131,8 +138,5 @@ export const deleteProblem = async (slug: string) => {
 
 export const invalidateProblemCache = async (slug: string) => {
   await redisClient.del(REDIS_KEYS.problemCache(slug));
-  const keys = await redisClient.keys('cache:problemlist:*');
-  if (keys.length > 0) {
-    await redisClient.del(...keys);
-  }
+  await invalidateProblemListCache();
 };

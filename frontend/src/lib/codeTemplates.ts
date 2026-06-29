@@ -1,30 +1,18 @@
 const DEFAULT_TEMPLATES: Record<string, string> = {
-  cpp: `#include <iostream>
-using namespace std;
-
-int main() {
-    
-    return 0;
-}`,
-  java: `import java.util.Scanner;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
+  cpp: `class Solution {
+public:
+    void solve() {
+        
+    }
+};`,
+  java: `class Solution {
+    public void solve() {
         
     }
 }`,
-  python: `import sys
-
-def solve():
-    pass
-
-if __name__ == "__main__":
-    solve()`,
-  javascript: `const fs = require('fs');
-const input = fs.readFileSync(0, 'utf8').trim();
-
-`,
+  python: `class Solution:
+    def solve(self) -> None:
+        pass`,
 };
 
 const PROBLEM_TEMPLATES: Record<string, Record<string, string>> = {
@@ -43,9 +31,6 @@ public:
         
     }
 };`,
-    javascript: `var isPalindrome = function(x) {
-    
-};`,
   },
   'two-sum': {
     java: `class Solution {
@@ -62,9 +47,6 @@ public:
         
     }
 };`,
-    javascript: `var twoSum = function(nums, target) {
-    
-};`,
   },
   'valid-parentheses': {
     java: `class Solution {
@@ -72,21 +54,15 @@ public:
         
     }
 }`,
-    python: `s = input().strip()
-print("true")`,
-    cpp: `#include <iostream>
-#include <string>
-using namespace std;
-
-int main() {
-    string s;
-    getline(cin, s);
-    cout << "true" << endl;
-    return 0;
-}`,
-    javascript: `const fs = require('fs');
-const s = fs.readFileSync(0, 'utf8').trim();
-console.log('true');`,
+    python: `class Solution:
+    def isValid(self, s: str) -> bool:
+        pass`,
+    cpp: `class Solution {
+public:
+    bool isValid(string s) {
+        
+    }
+};`,
   },
   'longest-substring': {
     java: `class Solution {
@@ -94,21 +70,31 @@ console.log('true');`,
         
     }
 }`,
-    python: `s = input().strip()
-print(0)`,
-    cpp: `#include <iostream>
-#include <string>
-using namespace std;
-
-int main() {
-    string s;
-    getline(cin, s);
-    cout << 0 << endl;
-    return 0;
+    python: `class Solution:
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        pass`,
+    cpp: `class Solution {
+public:
+    int lengthOfLongestSubstring(string s) {
+        
+    }
+};`,
+  },
+  'median-of-arrays': {
+    java: `class Solution {
+    public double findMedianSortedArrays(int[] nums1, int[] nums2) {
+        
+    }
 }`,
-    javascript: `const fs = require('fs');
-const s = fs.readFileSync(0, 'utf8').trim();
-console.log(0);`,
+    python: `class Solution:
+    def findMedianSortedArrays(self, nums1: list[int], nums2: list[int]) -> float:
+        pass`,
+    cpp: `class Solution {
+public:
+    double findMedianSortedArrays(vector<int>& nums1, vector<int>& nums2) {
+        
+    }
+};`,
   },
 };
 
@@ -116,7 +102,7 @@ export function getCodeTemplate(language: string, slug?: string): string {
   if (slug && PROBLEM_TEMPLATES[slug]?.[language]) {
     return PROBLEM_TEMPLATES[slug][language];
   }
-  return DEFAULT_TEMPLATES[language] ?? DEFAULT_TEMPLATES.javascript;
+  return DEFAULT_TEMPLATES[language] ?? DEFAULT_TEMPLATES.python;
 }
 
 export function codeStorageKey(slug: string, language: string): string {

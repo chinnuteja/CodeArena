@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Play, CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { fetchProblems } from '../lib/api';
 
@@ -16,17 +16,24 @@ function difficultyClass(value: string) {
 }
 
 export default function ProblemList() {
+  const location = useLocation();
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [problems, setProblems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const loadProblems = useCallback(() => {
+    setLoading(true);
+    setError('');
     fetchProblems()
       .then(setProblems)
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load problems'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadProblems();
+  }, [loadProblems, location.key]);
 
   return (
     <div className="page-container fade-in">

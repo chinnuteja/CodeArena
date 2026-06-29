@@ -22,7 +22,10 @@ export type ErrorCode =
   | 'ALREADY_REGISTERED'
   | 'INVITE_INVALID'
   | 'INVITE_EXPIRED'
-  | 'PROBLEM_NOT_SUBMITTABLE';
+  | 'PROBLEM_NOT_SUBMITTABLE'
+  | 'AI_NOT_CONFIGURED'
+  | 'AI_EMPTY_RESPONSE'
+  | 'AI_REQUEST_FAILED';
 
 export class AppError extends Error {
   constructor(

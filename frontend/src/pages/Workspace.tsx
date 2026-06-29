@@ -13,10 +13,12 @@ import {
   Loader2,
   ChevronLeft,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
-import { fetchProblem, runCode, submitCode, streamVerdict, getSubmission, type VerdictUpdate } from '../lib/api';
+import { fetchProblem, runCode, submitCode, streamVerdict, getSubmission, fetchAiStatus, type VerdictUpdate } from '../lib/api';
 import { codeStorageKey, getCodeTemplate } from '../lib/codeTemplates';
 import { useAuth } from '../context/AuthContext';
+import AiAssistantPanel from '../components/AiAssistantPanel';
 
 type RunResult = {
   status: string;
@@ -52,6 +54,8 @@ export default function Workspace() {
   const [compileError, setCompileError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [cursorPos, setCursorPos] = useState({ line: 1, column: 1 });
+  const [leftTab, setLeftTab] = useState<'description' | 'ai'>('description');
+  const [aiEnabled, setAiEnabled] = useState(false);
 
   const loadCodeForLanguage = useCallback(
     (lang: string) => {
@@ -80,6 +84,12 @@ export default function Workspace() {
 
   useEffect(() => {
     return () => stopStreamRef.current?.();
+  }, []);
+
+  useEffect(() => {
+    fetchAiStatus()
+      .then((s) => setAiEnabled(s.enabled))
+      .catch(() => setAiEnabled(false));
   }, []);
 
   useEffect(() => {
@@ -228,6 +238,19 @@ export default function Workspace() {
     return 'var(--error)';
   };
 
+  const isAccepted = submitResult?.verdict === 'AC';
+
+  const hasExecuted = runResults.length > 0 || submitResult != null;
+
+  const aiExecutionContext = {
+    hasRun: runResults.length > 0,
+    hasSubmit: submitResult != null,
+    runStatuses: runResults.map((r) => r.status),
+    submitVerdict: submitResult?.verdict ?? null,
+    passedTestCases: submitResult?.passedTestCases,
+    totalTestCases: submitResult?.totalTestCases,
+  };
+
   if (loading) {
     return (
       <div className="page-container center-cell">
@@ -300,13 +323,38 @@ export default function Workspace() {
         <div className="lc-pane lc-left-pane">
           <div className="lc-pane-header">
             <div className="lc-tabs">
-              <div className="lc-tab active">
+              <div
+                className={`lc-tab ${leftTab === 'description' ? 'active' : ''}`}
+                onClick={() => setLeftTab('description')}
+              >
                 <Code2 size={14} /> Description
               </div>
+              {aiEnabled && (
+                <div
+                  className={`lc-tab ${leftTab === 'ai' ? 'active' : ''}`}
+                  onClick={() => setLeftTab('ai')}
+                >
+                  <Sparkles size={14} color="#ffa116" /> AI Assist
+                </div>
+              )}
             </div>
           </div>
           <div className="lc-pane-body problem-description">
-            <div dangerouslySetInnerHTML={{ __html: problem.statement }} />
+            {leftTab === 'description' ? (
+              <div dangerouslySetInnerHTML={{ __html: problem.statement }} />
+            ) : problemSlug ? (
+              <AiAssistantPanel
+                problemSlug={problemSlug}
+                language={language}
+                code={code}
+                isLoggedIn={isLoggedIn}
+                onLoginRequired={() => openAuthModal('login')}
+                isAccepted={isAccepted}
+                hasExecuted={hasExecuted}
+                executionContext={aiExecutionContext}
+                onApplySolution={(newCode) => setCode(newCode)}
+              />
+            ) : null}
           </div>
         </div>
 

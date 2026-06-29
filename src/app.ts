@@ -47,6 +47,7 @@ import { problemRouter } from './modules/problem/problem.routes.js';
 import { testcaseRouter } from './modules/testcase/testcase.routes.js';
 import { submissionRouter } from './modules/submission/submission.routes.js';
 import { contestRouter } from './modules/contest/contest.routes.js';
+import { aiRouter } from './modules/ai/ai.routes.js';
 
 // Feature routers will be added here
 app.get('/', (req, res) => {
@@ -62,6 +63,7 @@ app.use('/problems', problemRouter);
 app.use('/problems/:slug/testcases', testcaseRouter);
 app.use('/submissions', submissionRouter);
 app.use('/contests', contestRouter);
+app.use('/ai', aiRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

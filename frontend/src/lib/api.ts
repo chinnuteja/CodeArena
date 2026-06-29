@@ -527,3 +527,42 @@ export function streamVerdict(
 
   return () => controller.abort();
 }
+
+export type AiAction =
+  | 'rate'
+  | 'hints'
+  | 'solution'
+  | 'enhance'
+  | 'time_complexity'
+  | 'space_complexity';
+
+export type AiExecutionContext = {
+  hasRun?: boolean;
+  hasSubmit?: boolean;
+  runStatuses?: string[];
+  submitVerdict?: string | null;
+  passedTestCases?: number;
+  totalTestCases?: number;
+};
+
+export async function fetchAiStatus() {
+  const res = await fetch(`${API_URL}/ai/status`);
+  const data = await parseResponse(res);
+  return data.data as { enabled: boolean };
+}
+
+export async function requestAiAssist(body: {
+  problemSlug: string;
+  language: string;
+  source: string;
+  action: AiAction;
+  executionContext?: AiExecutionContext;
+}) {
+  const res = await fetch(`${API_URL}/ai/assist`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await parseResponse(res);
+  return data.data as { content: string; action: AiAction };
+}

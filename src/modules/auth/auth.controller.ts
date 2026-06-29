@@ -18,23 +18,24 @@ const parseCookies = (cookieHeader: string | undefined) => {
   return list;
 };
 
-const setRefreshCookie = (res: Response, token: string) => {
-  res.cookie('refreshToken', token, {
+const refreshCookieOptions = () => {
+  const crossOrigin = Boolean(env.CORS_ORIGIN);
+  return {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    // Cross-origin SPA (e.g. Vercel → EC2) requires SameSite=None for refresh cookies
+    sameSite: (crossOrigin ? 'none' : 'strict') as 'none' | 'strict',
     path: env.REFRESH_COOKIE_PATH,
     maxAge: env.JWT_REFRESH_TTL_DAYS * 86400 * 1000,
-  });
+  };
+};
+
+const setRefreshCookie = (res: Response, token: string) => {
+  res.cookie('refreshToken', token, refreshCookieOptions());
 };
 
 const clearRefreshCookie = (res: Response) => {
-  res.clearCookie('refreshToken', {
-    path: env.REFRESH_COOKIE_PATH,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    httpOnly: true,
-  });
+  res.clearCookie('refreshToken', refreshCookieOptions());
 };
 
 export const register = async (req: Request, res: Response) => {

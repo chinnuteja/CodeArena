@@ -49,20 +49,8 @@ export const createSubmission = async (data: CreateSubmissionDto) => {
     }
   }
 
-  let finalSource = data.source;
-  if (data.language === 'java') {
-    const { wrapJavaSolutionSource } = await import('../../lib/execution/javaRunWrapper.js');
-    finalSource = wrapJavaSolutionSource(data.source);
-  } else if (data.language === 'python') {
-    const { wrapPythonSolutionSource } = await import('../../lib/execution/pythonRunWrapper.js');
-    finalSource = wrapPythonSolutionSource(data.source);
-  } else if (data.language === 'cpp') {
-    const { wrapCppSolutionSource } = await import('../../lib/execution/cppRunWrapper.js');
-    finalSource = wrapCppSolutionSource(data.source);
-  }
-
   const sourceRef = crypto.randomUUID() + '.txt';
-  await storage.putObject(sourceRef, finalSource);
+  await storage.putObject(sourceRef, data.source);
 
   const submission = new Submission({
     userId: data.userId,

@@ -47,7 +47,7 @@ export function wrapCppSolutionSource(source: string): string {
     } else if (p.type.includes('string')) {
       paramReads += `
     string ${p.name};
-    if (!(cin >> ${p.name})) return 0;
+    getline(cin, ${p.name});
 `;
     } else if (p.type.includes('bool')) {
       paramReads += `

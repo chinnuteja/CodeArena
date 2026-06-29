@@ -32,9 +32,7 @@ export const deleteProblem = async (req: Request, res: Response) => {
 
 import { engine } from '../../lib/execution/index.js';
 import { languages } from '../../lib/execution/languages.js';
-import { wrapJavaSolutionSource } from '../../lib/execution/javaRunWrapper.js';
-import { wrapPythonSolutionSource } from '../../lib/execution/pythonRunWrapper.js';
-import { wrapCppSolutionSource } from '../../lib/execution/cppRunWrapper.js';
+import { prepareSource } from '../../lib/execution/prepareSource.js';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -59,14 +57,7 @@ export const runCode = async (req: Request, res: Response) => {
   await fs.chmod(workdir, 0o777);
   
   try {
-    let finalSource = source;
-    if (language === 'java') {
-      finalSource = wrapJavaSolutionSource(source);
-    } else if (language === 'python') {
-      finalSource = wrapPythonSolutionSource(source);
-    } else if (language === 'cpp') {
-      finalSource = wrapCppSolutionSource(source);
-    }
+    const finalSource = prepareSource(language, source);
 
     const langSpec = languages[language as keyof typeof languages];
     const sourcePath = path.join(workdir, langSpec.sourceFilename);
