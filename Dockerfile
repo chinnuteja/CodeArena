@@ -8,7 +8,7 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY src ./src
-RUN npm run build
+RUN NODE_OPTIONS=--max_old_space_size=2048 npm run build
 
 FROM node:22-bookworm-slim AS production
 
