@@ -33,14 +33,14 @@ def main():
     params = [p for p in sig.parameters.values() if p.name != 'self']
 
     raw = sys.stdin.read()
-    if not raw.strip():
-        return
+    if not raw:
+        pass # Allow empty execution, might be an empty string testcase
 
     if len(params) == 1:
         hint = hints.get(params[0].name)
         th = str(hint).lower() if hint else ''
         if 'str' in th:
-            res = method(raw.strip())
+            res = method(raw.rstrip('\\r\\n'))
             print(_format_output(res))
             return
 

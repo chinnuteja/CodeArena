@@ -3,6 +3,8 @@ import { ExecutionEngine, RunRequest, RunResult, CompileResult } from './executi
 import { Language } from '../../config/constants.js';
 import { languages } from './languages.js';
 import { env } from '../../config/env.js';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 const socketPath = process.platform === 'win32' 
   ? '//./pipe/dockerDesktopLinuxEngine' 
@@ -68,10 +70,13 @@ export class DockerEngine implements ExecutionEngine {
     }
 
     const cmd = spec.runCmd(artifact);
+    
+    const inputPath = path.join(req.workdir, 'input.txt');
+    await fs.writeFile(inputPath, req.stdin, { mode: 0o666 });
 
     const container = await docker.createContainer({
       Image: spec.image,
-      Cmd: cmd,
+      Cmd: ['sh', '-c', `${cmd.join(' ')} < /app/input.txt`],
       HostConfig: {
         Binds: [`${req.workdir}:/app:ro`],
         Tmpfs: { '/tmp': 'rw,noexec,nosuid,size=65536k' },
@@ -85,8 +90,8 @@ export class DockerEngine implements ExecutionEngine {
         SecurityOpt: ['no-new-privileges'],
       },
       User: '1000',
-      OpenStdin: true,
-      StdinOnce: true,
+      OpenStdin: false,
+      StdinOnce: false,
       Tty: false,
     });
 
@@ -95,10 +100,7 @@ export class DockerEngine implements ExecutionEngine {
     let durationMs = 0;
     
     try {
-      const stream = await container.attach({ stream: true, stdin: true, stdout: true, stderr: true });
-      stream.write(req.stdin);
-      stream.end();
-
+      const stream = await container.attach({ stream: true, stdout: true, stderr: true });
       const startTime = Date.now();
       await container.start();
 
